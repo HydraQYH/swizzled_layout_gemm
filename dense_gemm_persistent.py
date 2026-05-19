@@ -233,10 +233,15 @@ class SwizzleCopyKernel:
         print("CuTeDSL DEBUG shared_memory_layout_atom", shared_memory_layout_atom)
 
         if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K):
-            order=(1, 0)
-        elif cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
             order=(0, 1)
-        self.shared_memory_layout = cute.tile_to_shape(shared_memory_layout_atom, (self.block_m, self.block_n), order=order)
+        elif cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
+            order=(1, 0)
+        print("CuTeDSL DEBUG order", order)
+        self.shared_memory_layout = cute.tile_to_shape(
+            shared_memory_layout_atom,
+            (self.block_m, self.block_n),
+            order=order
+        )
         print("CuTeDSL DEBUG self.shared_memory_layout", self.shared_memory_layout)
 
         swizzled_matrix_layout = cute.tile_to_shape(self.shared_memory_layout, matrix.shape, order=(*order, 2))
@@ -634,9 +639,9 @@ class HopperWgmmaGemmPersistentKernel:
         b_smem_layout = cute.slice_(self.b_smem_layout_staged, (None, None, 0))
         print("CuTeDSL DEBUG b_smem_layout", b_smem_layout)
         if cutlass.const_expr(self.b_layout.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K):
-            order=(1, 0, 2)
-        elif cutlass.const_expr(self.b_layout.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
             order=(0, 1, 2)
+        elif cutlass.const_expr(self.b_layout.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
+            order=(1, 0, 2)
         swizzled_b_layout = cute.tile_to_shape(b_smem_layout, b.shape, order=order)
         print("CuTeDSL DEBUG swizzled_b_layout", swizzled_b_layout)
         swizzled_b = cute.make_tensor(b.iterator, swizzled_b_layout)
@@ -1336,6 +1341,8 @@ class HopperWgmmaGemmPersistentKernel:
             cute.append(b_smem_shape, ab_stage),
             order=(0, 1, 2) if b_is_k_major else (1, 0, 2),
         )
+        print("CuTeDSL DEBUG b_smem_layout_atom", b_smem_layout_atom)
+        print("CuTeDSL DEBUG b_smem_layout_staged", b_smem_layout_staged)
 
         c_smem_shape = epi_tile
         c_major_mode_size = epi_tile[1] if c_layout.is_n_major_c() else epi_tile[0]
@@ -1741,11 +1748,16 @@ def run(
     stream = cuda.CUstream(torch_stream.cuda_stream)
     # Compile kernel
     b_major = utils.LayoutEnum.COL_MAJOR if b_major == "n" else utils.LayoutEnum.ROW_MAJOR
+    print("CuTeDSL DEBUG b_major", b_major)
 
     compiled_gemm = cute.compile(
         gemm, a_tensor, b_tensor, c_tensor, max_active_clusters, stream
     )
     swizzle_copy = SwizzleCopyKernel(gemm.tile_shape_mnk[1], gemm.tile_shape_mnk[2])
+
+    if n % gemm.tile_shape_mnk[1] != 0 or k % gemm.tile_shape_mnk[2] != 0:
+        raise RuntimeError(f"tile_shape_n/k {gemm.tile_shape_mnk[1]}/{gemm.tile_shape_mnk[2]} is not aligned to problem size n/k {n}/{k}")
+
     compiled_swizzle_copy = cute.compile(swizzle_copy, b_tensor, b_major, b_swizzled_tensor, stream, options="--generate-line-info")
 
     if not skip_ref_check:
