@@ -35,9 +35,9 @@ class SwizzleCopyKernel:
     print("CuTeDSL DEBUG shared_memory_layout_atom", shared_memory_layout_atom)
 
     if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K):
-      order=(1, 0)
-    elif cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
       order=(0, 1)
+    elif cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
+      order=(1, 0)
     self.shared_memory_layout = cute.tile_to_shape(shared_memory_layout_atom, (self.block_m, self.block_n), order=order)
     print("CuTeDSL DEBUG self.shared_memory_layout", self.shared_memory_layout)
 
@@ -252,12 +252,12 @@ def run(
   print(matrix)
   print(swizzled_matrix)
 
-  # for _ in range(3):
-  #   compiled_kernel(cute_matrix, major, cute_swizzled_matrix, stream)
+  for _ in range(3):
+    compiled_kernel(cute_matrix, major, cute_swizzled_matrix, stream)
 
-  # torch.cuda.nvtx.range_push('swizzle_copy')
-  # compiled_kernel(cute_matrix, major, cute_swizzled_matrix, stream)
-  # torch.cuda.nvtx.range_pop()
+  torch.cuda.nvtx.range_push('swizzle_copy')
+  compiled_kernel(cute_matrix, major, cute_swizzled_matrix, stream)
+  torch.cuda.nvtx.range_pop()
 
 if __name__ == '__main__':
   run(128, 64, True)
