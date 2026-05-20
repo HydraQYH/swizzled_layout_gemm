@@ -223,7 +223,7 @@ class SwizzleCopyKernel:
         swizzle_mode = sm90_utils.get_smem_layout_atom(
             layout_enum,
             self.dtype,
-            self.block_n if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K) else self.block_m
+            self.block_n if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.K) else self.block_m
         )
         print("CuTeDSL DEBUG swizzle_mode", swizzle_mode)
         shared_memory_layout_atom = sm90_utils.make_smem_layout_atom(
@@ -232,9 +232,9 @@ class SwizzleCopyKernel:
         )
         print("CuTeDSL DEBUG shared_memory_layout_atom", shared_memory_layout_atom)
 
-        if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K):
+        if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.K):
             order=(0, 1)
-        elif cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
+        elif cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.MN):
             order=(1, 0)
         print("CuTeDSL DEBUG order", order)
         self.shared_memory_layout = cute.tile_to_shape(
@@ -638,9 +638,9 @@ class HopperWgmmaGemmPersistentKernel:
         # )
         b_smem_layout = cute.slice_(self.b_smem_layout_staged, (None, None, 0))
         print("CuTeDSL DEBUG b_smem_layout", b_smem_layout)
-        if cutlass.const_expr(self.b_layout.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K):
+        if cutlass.const_expr(self.b_layout.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.K):
             order=(0, 1, 2)
-        elif cutlass.const_expr(self.b_layout.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
+        elif cutlass.const_expr(self.b_layout.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.MN):
             order=(1, 0, 2)
         swizzled_b_layout = cute.tile_to_shape(b_smem_layout, b.shape, order=order)
         print("CuTeDSL DEBUG swizzled_b_layout", swizzled_b_layout)
@@ -1305,10 +1305,10 @@ class HopperWgmmaGemmPersistentKernel:
         a_smem_shape = cute.slice_(tile_shape_mnk, (None, 0, None))
 
         a_is_k_major = (
-            a_layout.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K
+            a_layout.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.K
         )
         b_is_k_major = (
-            b_layout.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K
+            b_layout.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.K
         )
         a_major_mode_size = tile_shape_mnk[2 if a_is_k_major else 0]
         a_smem_layout_atom = cute.nvgpu.warpgroup.make_smem_layout_atom(
@@ -1725,10 +1725,10 @@ def run(
         a_torch_cpu, a_dtype, is_dynamic_layout=True, assumed_align=16
     )
     b_tensor, _ = cutlass_torch.cute_tensor_like(
-        b_torch_cpu, b_dtype, is_dynamic_layout=False, assumed_align=16
+        b_torch_cpu, b_dtype, is_dynamic_layout=True, assumed_align=16
     )
     b_swizzled_tensor, _ = cutlass_torch.cute_tensor_like(
-        b_torch_cpu, b_dtype, is_dynamic_layout=False, assumed_align=16
+        b_torch_cpu, b_dtype, is_dynamic_layout=True, assumed_align=16
     )
     c_tensor, c_torch_gpu = cutlass_torch.cute_tensor_like(
         c_torch_cpu, c_dtype, is_dynamic_layout=True, assumed_align=16

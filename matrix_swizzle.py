@@ -25,7 +25,7 @@ class SwizzleCopyKernel:
     swizzle_mode = sm90_utils.get_smem_layout_atom(
       layout_enum,
       self.dtype,
-      self.block_n if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K) else self.block_m
+      self.block_n if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.K) else self.block_m
     )
     print("CuTeDSL DEBUG swizzle_mode", swizzle_mode)
     shared_memory_layout_atom = sm90_utils.make_smem_layout_atom(
@@ -34,9 +34,9 @@ class SwizzleCopyKernel:
     )
     print("CuTeDSL DEBUG shared_memory_layout_atom", shared_memory_layout_atom)
 
-    if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.K):
+    if cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.K):
       order=(0, 1)
-    elif cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.warpgroup.OperandMajorMode.MN):
+    elif cutlass.const_expr(layout_enum.sm90_mma_major_mode() == cute.nvgpu.OperandMajorMode.MN):
       order=(1, 0)
     self.shared_memory_layout = cute.tile_to_shape(shared_memory_layout_atom, (self.block_m, self.block_n), order=order)
     print("CuTeDSL DEBUG self.shared_memory_layout", self.shared_memory_layout)
