@@ -97,7 +97,7 @@ Constraints are same as dense_gemm.py:
 * For 8-bit integer types, A and B can have different types (int8 or uint8)
 * 8-bit types (e4m3fn, e5m2, int8, uint8) only support k-major layout
 * CTA tile shape M must be 64/128
-* CTA tile shape N must be 64/128/256
+* CTA tile shape N must be 16/32/64/128/256
 * CTA tile shape K must be 64
 * Cluster shape M/N must be positive and power of 2, total cluster size <= 4
 * The contiguous dimension of A/B/C tensors must be at least 16 bytes aligned,
@@ -409,7 +409,7 @@ class HopperWgmmaGemmPersistentKernel:
 
     :note: Constraints:
         - CTA tile M must be 64/128
-        - CTA tile N must be 64/128/256
+        - CTA tile N must be 16/32/64/128/256
         - CTA tile K must be 64
         - Cluster shape M/N must be positive and power of 2, total cluster size <= 4
 
@@ -517,7 +517,7 @@ class HopperWgmmaGemmPersistentKernel:
         if self.tile_shape_mnk[0] not in [64, 128]:
             raise ValueError("CTA tile shape M must be 64/128")
         if self.tile_shape_mnk[1] not in [16, 32, 64, 128, 256]:
-            raise ValueError("CTA tile shape N must be 64/128/256")
+            raise ValueError("CTA tile shape N must be 16/32/64/128/256")
 
         self.tiled_mma = sm90_utils.make_trivial_tiled_mma(
             self.a_dtype,
